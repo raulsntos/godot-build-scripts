@@ -55,7 +55,7 @@ if [ "${MONO}" == "1" ]; then
   $SCONS platform=macos $OPTIONS $OPTIONS_MONO arch=arm64 target=editor
   lipo -create bin/godot.macos.editor.x86_64.mono bin/godot.macos.editor.arm64.mono -output bin/godot.macos.editor.universal.mono
   $STRIP bin/godot.macos.editor.universal.mono
-  ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=macos
+  ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=macos --ci-build
 
   mkdir -p /root/out/tools-mono
   cp -rvp bin/* /root/out/tools-mono

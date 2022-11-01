@@ -51,7 +51,7 @@ if [ "${MONO}" == "1" ]; then
   cp -r /root/mono-glue/GodotSharp/GodotSharpEditor/Generated modules/mono/glue/GodotSharp/GodotSharpEditor/
 
   $SCONS platform=windows arch=x86_64 $OPTIONS $OPTIONS_MONO target=editor
-  ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows
+  ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows --ci-build
   mkdir -p /root/out/x86_64/tools-mono
   cp -rvp bin/* /root/out/x86_64/tools-mono
   rm -rf bin
@@ -63,7 +63,7 @@ if [ "${MONO}" == "1" ]; then
   rm -rf bin
 
   $SCONS platform=windows arch=x86_32 $OPTIONS $OPTIONS_MONO target=editor
-  ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows
+  ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows --ci-build
   mkdir -p /root/out/x86_32/tools-mono
   cp -rvp bin/* /root/out/x86_32/tools-mono
   rm -rf bin
