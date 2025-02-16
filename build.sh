@@ -26,6 +26,7 @@ username=""
 password=""
 godot_version=""
 git_treeish="master"
+build_export_templates=1
 build_classical=1
 build_mono=1
 build_steam=0
@@ -33,7 +34,15 @@ force_download=0
 skip_download=1
 skip_git_checkout=0
 
-while getopts "h?r:u:p:v:g:b:fsc" opt; do
+build_targets=""
+build_windows=1
+build_linux=1
+build_web=1
+build_macos=1
+build_android=1
+build_ios=1
+
+while getopts "h?r:u:p:v:g:b:fscz:-:" opt; do
   case "$opt" in
   h|\?)
     echo "Usage: $0 [OPTIONS...]"
@@ -44,9 +53,11 @@ while getopts "h?r:u:p:v:g:b:fsc" opt; do
     echo "  -v godot version (e.g. 3.1-alpha5) [mandatory]"
     echo "  -g git treeish (e.g. master)"
     echo "  -b all|classical|mono (default: all)"
+    echo "  -z target platforms concatenated by ';' (e.g. windows;linux_x86_64;linux_x86_32)"
     echo "  -f force redownload of all images"
     echo "  -s skip downloading"
     echo "  -c skip checkout"
+    echo "  --no-export-templates skip building export templates (default: false)"
     echo
     exit 1
     ;;
@@ -80,6 +91,47 @@ while getopts "h?r:u:p:v:g:b:fsc" opt; do
     ;;
   c)
     skip_git_checkout=1
+    ;;
+  z)
+    build_targets="$OPTARG"
+
+    # Reset all targets, since we're explicitly specifying which ones to build.
+    build_windows=0
+    build_linux=0
+    build_web=0
+    build_macos=0
+    build_android=0
+    build_ios=0
+
+    IFS=';' read -ra targets_array <<< "$build_targets"
+    for target in "${targets_array[@]}"; do
+      if [[ "$target" == windows_* ]] || [[ "$target" == windows ]]; then
+        build_windows=1
+      elif [[ "$target" == linux_* ]] || [[ "$target" == linux ]]; then
+        build_linux=1
+      elif [[ "$target" == web_* ]] || [[ "$target" == web ]]; then
+        build_web=1
+      elif [[ "$target" == macos_* ]] || [[ "$target" == macos ]]; then
+        build_macos=1
+      elif [[ "$target" == android_* ]] || [[ "$target" == android ]]; then
+        build_android=1
+      elif [[ "$target" == ios_* ]] || [[ "$target" == ios ]]; then
+        build_ios=1
+      fi
+    done
+    ;;
+  -)
+    case "${OPTARG}" in
+    no-export-templates)
+      build_export_templates=0
+      ;;
+    *)
+      if [ "$OPTERR" == 1 ] && [ "${optspec:0:1}" != ":" ]; then
+        echo "Unknown option --${OPTARG}."
+        exit 1
+      fi
+      ;;
+    esac
     ;;
   esac
 done
@@ -233,7 +285,7 @@ mkdir -p ${basedir}/out
 mkdir -p ${basedir}/out/logs
 mkdir -p ${basedir}/mono-glue
 
-export podman_run="${podman} run -it --rm --env BUILD_NAME=${BUILD_NAME} --env GODOT_VERSION_STATUS=${GODOT_VERSION_STATUS} --env NUM_CORES=${NUM_CORES} --env CLASSICAL=${build_classical} --env MONO=${build_mono} -v ${basedir}/godot-${godot_version}.tar.gz:/root/godot.tar.gz -v ${basedir}/mono-glue:/root/mono-glue -w /root/"
+export podman_run="${podman} run -it --rm --env BUILD_NAME=${BUILD_NAME} --env GODOT_VERSION_STATUS=${GODOT_VERSION_STATUS} --env NUM_CORES=${NUM_CORES} --env CLASSICAL=${build_classical} --env MONO=${build_mono} --env BUILD_TARGETS=${build_targets} --env BUILD_EXPORT_TEMPLATES=${build_export_templates} -v ${basedir}/godot-${godot_version}.tar.gz:/root/godot.tar.gz -v ${basedir}/mono-glue:/root/mono-glue -w /root/"
 export img_version=$IMAGE_VERSION
 
 if [ "${build_mono}" == 1 ]; then
@@ -241,23 +293,35 @@ if [ "${build_mono}" == 1 ]; then
   ${podman_run} -v ${basedir}/build-mono-glue:/root/build localhost/godot-linux:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/mono-glue
 fi
 
-mkdir -p ${basedir}/out/windows
-${podman_run} -v ${basedir}/build-windows:/root/build -v ${basedir}/out/windows:/root/out -v ${basedir}/deps/angle:/root/angle -v ${basedir}/deps/mesa:/root/mesa --env STEAM=${build_steam} localhost/godot-windows:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/windows
+if [ "${build_windows}" == 1 ]; then
+  mkdir -p ${basedir}/out/windows
+  ${podman_run} -v ${basedir}/build-windows:/root/build -v ${basedir}/out/windows:/root/out -v ${basedir}/deps/angle:/root/angle -v ${basedir}/deps/mesa:/root/mesa --env STEAM=${build_steam} localhost/godot-windows:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/windows
+fi
 
-mkdir -p ${basedir}/out/linux
-${podman_run} -v ${basedir}/build-linux:/root/build -v ${basedir}/out/linux:/root/out localhost/godot-linux:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/linux
+if [ "${build_linux}" == 1 ]; then
+  mkdir -p ${basedir}/out/linux
+  ${podman_run} -v ${basedir}/build-linux:/root/build -v ${basedir}/out/linux:/root/out localhost/godot-linux:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/linux
+fi
 
-mkdir -p ${basedir}/out/web
-${podman_run} -v ${basedir}/build-web:/root/build -v ${basedir}/out/web:/root/out localhost/godot-web:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/web
+if [ "${build_web}" == 1 ]; then
+  mkdir -p ${basedir}/out/web
+  ${podman_run} -v ${basedir}/build-web:/root/build -v ${basedir}/out/web:/root/out localhost/godot-web:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/web
+fi
 
-mkdir -p ${basedir}/out/macos
-${podman_run} -v ${basedir}/build-macos:/root/build -v ${basedir}/out/macos:/root/out -v ${basedir}/deps/moltenvk:/root/moltenvk -v ${basedir}/deps/angle:/root/angle localhost/godot-osx:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/macos
+if [ "${build_macos}" == 1 ]; then
+  mkdir -p ${basedir}/out/macos
+  ${podman_run} -v ${basedir}/build-macos:/root/build -v ${basedir}/out/macos:/root/out -v ${basedir}/deps/moltenvk:/root/moltenvk -v ${basedir}/deps/angle:/root/angle localhost/godot-osx:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/macos
+fi
 
-mkdir -p ${basedir}/out/android
-${podman_run} -v ${basedir}/build-android:/root/build -v ${basedir}/out/android:/root/out -v ${basedir}/deps/swappy:/root/swappy -v ${basedir}/deps/keystore:/root/keystore localhost/godot-android:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/android
+if [ "${build_android}" == 1 ]; then
+  mkdir -p ${basedir}/out/android
+  ${podman_run} -v ${basedir}/build-android:/root/build -v ${basedir}/out/android:/root/out -v ${basedir}/deps/swappy:/root/swappy -v ${basedir}/deps/keystore:/root/keystore localhost/godot-android:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/android
+fi
 
-mkdir -p ${basedir}/out/ios
-${podman_run} -v ${basedir}/build-ios:/root/build -v ${basedir}/out/ios:/root/out localhost/godot-ios:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/ios
+if [ "${build_ios}" == 1 ]; then
+  mkdir -p ${basedir}/out/ios
+  ${podman_run} -v ${basedir}/build-ios:/root/build -v ${basedir}/out/ios:/root/out localhost/godot-ios:${img_version} bash build/build.sh 2>&1 | tee ${basedir}/out/logs/ios
+fi
 
 uid=$(id -un)
 gid=$(id -gn)

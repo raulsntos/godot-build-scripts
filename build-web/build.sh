@@ -37,44 +37,52 @@ tar xf /root/godot.tar.gz --strip-components=1
 if [ "${CLASSICAL}" == "1" ]; then
   echo "Starting classical build for Web..."
 
-  for i in {0..3}; do
-    cp -r /root/godot /root/godot$i
-    cd /root/godot$i
-    echo "$SCONS platform=web ${OPTIONS} ${JOBS[$i]}"
-    $SCONS platform=web ${OPTIONS} ${JOBS[$i]} &
-    pids[$i]=$!
-  done
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    for i in {0..3}; do
+      cp -r /root/godot /root/godot$i
+      cd /root/godot$i
+      echo "$SCONS platform=web ${OPTIONS} ${JOBS[$i]}"
+      $SCONS platform=web ${OPTIONS} ${JOBS[$i]} &
+      pids[$i]=$!
+    done
+  fi
 
   cd /root/godot
   echo "$SCONS platform=web ${OPTIONS} target=editor use_closure_compiler=yes"
   $SCONS platform=web ${OPTIONS} target=editor use_closure_compiler=yes &
   pid_editor=$!
 
-  for pid in ${pids[*]}; do
-    wait $pid
-  done
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    for pid in ${pids[*]}; do
+      wait $pid
+    done
+  fi
   wait $pid_editor
 
-  for i in {0..3}; do
-    cp -r /root/godot /root/godot-nothreads$i
-    cd /root/godot-nothreads$i
-    echo "$SCONS platform=web ${OPTIONS} ${JOBS_NOTHREADS[$i]}"
-    $SCONS platform=web ${OPTIONS} ${JOBS_NOTHREADS[$i]} &
-    pids_nothreads[$i]=$!
-  done
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    for i in {0..3}; do
+      cp -r /root/godot /root/godot-nothreads$i
+      cd /root/godot-nothreads$i
+      echo "$SCONS platform=web ${OPTIONS} ${JOBS_NOTHREADS[$i]}"
+      $SCONS platform=web ${OPTIONS} ${JOBS_NOTHREADS[$i]} &
+      pids_nothreads[$i]=$!
+    done
 
-  for pid in ${pids_nothreads[*]}; do
-    wait $pid
-  done
+    for pid in ${pids_nothreads[*]}; do
+      wait $pid
+    done
+  fi
 
   mkdir -p /root/out/tools
   cp -rvp /root/godot/bin/*.editor*.zip /root/out/tools
 
-  mkdir -p /root/out/templates
-  for i in {0..3}; do
-    cp -rvp /root/godot$i/bin/*.zip /root/out/templates
-    cp -rvp /root/godot-nothreads$i/bin/*.zip /root/out/templates
-  done
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    mkdir -p /root/out/templates
+    for i in {0..3}; do
+      cp -rvp /root/godot$i/bin/*.zip /root/out/templates
+      cp -rvp /root/godot-nothreads$i/bin/*.zip /root/out/templates
+    done
+  fi
 fi
 
 # Mono
@@ -84,14 +92,16 @@ fi
 if false; then
   echo "Starting Mono build for Web..."
 
-  cp -r /root/mono-glue/GodotSharp/GodotSharp/Generated modules/mono/glue/GodotSharp/GodotSharp/
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    cp -r /root/mono-glue/GodotSharp/GodotSharp/Generated modules/mono/glue/GodotSharp/GodotSharp/
 
-  $SCONS platform=web ${OPTIONS} ${OPTIONS_MONO} target=template_debug
-  $SCONS platform=web ${OPTIONS} ${OPTIONS_MONO} target=template_release
+    $SCONS platform=web ${OPTIONS} ${OPTIONS_MONO} target=template_debug
+    $SCONS platform=web ${OPTIONS} ${OPTIONS_MONO} target=template_release
 
-  mkdir -p /root/out/templates-mono
-  cp -rvp bin/*.zip /root/out/templates-mono
-  rm -f bin/*.zip
+    mkdir -p /root/out/templates-mono
+    cp -rvp bin/*.zip /root/out/templates-mono
+    rm -f bin/*.zip
+  fi
 fi
 
 echo "Web build successful"

@@ -9,6 +9,44 @@ export OPTIONS="production=yes"
 export OPTIONS_MONO="module_mono_enabled=yes"
 export TERM=xterm
 
+build_x86_64=1
+build_x86_32=1
+build_arm64=1
+build_arm32=1
+
+_build_star=0
+
+if [ ! -z "${BUILD_TARGETS}" ]; then
+  # Reset all targets, since we're explicitly specifying which ones to build.
+  build_x86_64=0
+  build_x86_32=0
+  build_arm64=0
+  build_arm32=0
+
+  IFS=';' read -ra targets_array <<< "${BUILD_TARGETS}"
+  for target in "${targets_array[@]}"; do
+    if [[ "$target" == android ]]; then
+      # This is the equivalent of 'android_*'.
+      _build_star=1
+    elif [[ "$target" == android_x86_64 ]]; then
+      build_x86_64=1
+    elif [[ "$target" == android_x86_32 ]]; then
+      build_x86_32=1
+    elif [[ "$target" == android_arm64 ]]; then
+      build_arm64=1
+    elif [[ "$target" == android_arm32 ]]; then
+      build_arm32=1
+    fi
+  done
+fi
+
+if [ "${_build_star}" == 1 ]; then
+  build_x86_64=1
+  build_x86_32=1
+  build_arm64=1
+  build_arm32=1
+fi
+
 rm -rf godot
 mkdir godot
 cd godot
@@ -60,41 +98,51 @@ if [ "${CLASSICAL}" == "1" ]; then
     cp bin/android_editor_builds/android_editor-picoos-debug.apk /root/out/tools/android_editor_picoos.apk
   fi
 
-  # Restart from a clean tarball, as we'll copy all the contents
-  # outside the container for the MavenCentral upload.
-  rm -rf /root/godot/*
-  tar xf /root/godot.tar.gz --strip-components=1
-  cp -rf /root/swappy/* thirdparty/swappy-frame-pacing/
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    # Restart from a clean tarball, as we'll copy all the contents
+    # outside the container for the MavenCentral upload.
+    rm -rf /root/godot/*
+    tar xf /root/godot.tar.gz --strip-components=1
+    cp -rf /root/swappy/* thirdparty/swappy-frame-pacing/
 
-  $SCONS platform=android arch=arm32 $OPTIONS target=template_debug
-  $SCONS platform=android arch=arm32 $OPTIONS target=template_release
+    if [ "${build_arm32}" == 1 ]; then
+      $SCONS platform=android arch=arm32 $OPTIONS target=template_debug
+      $SCONS platform=android arch=arm32 $OPTIONS target=template_release
+    fi
 
-  $SCONS platform=android arch=arm64 $OPTIONS target=template_debug
-  $SCONS platform=android arch=arm64 $OPTIONS target=template_release
+    if [ "${build_arm64}" == 1 ]; then
+      $SCONS platform=android arch=arm64 $OPTIONS target=template_debug
+      $SCONS platform=android arch=arm64 $OPTIONS target=template_release
+    fi
 
-  $SCONS platform=android arch=x86_32 $OPTIONS target=template_debug
-  $SCONS platform=android arch=x86_32 $OPTIONS target=template_release
+    if [ "${build_x86_32}" == 1 ]; then
+      $SCONS platform=android arch=x86_32 $OPTIONS target=template_debug
+      $SCONS platform=android arch=x86_32 $OPTIONS target=template_release
+    fi
 
-  $SCONS platform=android arch=x86_64 $OPTIONS target=template_debug
-  $SCONS platform=android arch=x86_64 $OPTIONS target=template_release
+    if [ "${build_x86_64}" == 1 ]; then
+      $SCONS platform=android arch=x86_64 $OPTIONS target=template_debug
+      $SCONS platform=android arch=x86_64 $OPTIONS target=template_release
+    fi
 
-  pushd platform/android/java
-  ./gradlew generateGodotTemplates
+    pushd platform/android/java
+    ./gradlew generateGodotTemplates
 
-  if [ "$store_release" == "yes" ]; then
-    # Copy source folder with compiled libs so we can optionally use it
-    # in a separate script to upload the templates to MavenCentral.
-    cp -r /root/godot /root/out/source/
-    # Backup ~/.gradle too so we can reuse all the downloaded stuff.
-    cp -r /root/.gradle /root/out/source/.gradle
+    if [ "$store_release" == "yes" ]; then
+      # Copy source folder with compiled libs so we can optionally use it
+      # in a separate script to upload the templates to MavenCentral.
+      cp -r /root/godot /root/out/source/
+      # Backup ~/.gradle too so we can reuse all the downloaded stuff.
+      cp -r /root/.gradle /root/out/source/.gradle
+    fi
+    popd
+
+    mkdir -p /root/out/templates
+    cp bin/android_source.zip /root/out/templates/
+    cp bin/android_debug.apk /root/out/templates/
+    cp bin/android_release.apk /root/out/templates/
+    cp bin/godot-lib.template_release.aar /root/out/templates/
   fi
-  popd
-
-  mkdir -p /root/out/templates
-  cp bin/android_source.zip /root/out/templates/
-  cp bin/android_debug.apk /root/out/templates/
-  cp bin/android_release.apk /root/out/templates/
-  cp bin/godot-lib.template_release.aar /root/out/templates/
 fi
 
 # Mono
@@ -102,29 +150,40 @@ fi
 if [ "${MONO}" == "1" ]; then
   echo "Starting Mono build for Android..."
 
-  cp -r /root/mono-glue/GodotSharp/GodotSharp/Generated modules/mono/glue/GodotSharp/GodotSharp/
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    cp -r /root/mono-glue/GodotSharp/GodotSharp/Generated modules/mono/glue/GodotSharp/GodotSharp/
 
-  $SCONS platform=android arch=arm32 $OPTIONS $OPTIONS_MONO target=template_debug
-  $SCONS platform=android arch=arm32 $OPTIONS $OPTIONS_MONO target=template_release
 
-  $SCONS platform=android arch=arm64 $OPTIONS $OPTIONS_MONO target=template_debug
-  $SCONS platform=android arch=arm64 $OPTIONS $OPTIONS_MONO target=template_release
+    if [ "${build_arm32}" == 1 ]; then
+        $SCONS platform=android arch=arm32 $OPTIONS $OPTIONS_MONO target=template_debug
+        $SCONS platform=android arch=arm32 $OPTIONS $OPTIONS_MONO target=template_release
+    fi
 
-  $SCONS platform=android arch=x86_32 $OPTIONS $OPTIONS_MONO target=template_debug
-  $SCONS platform=android arch=x86_32 $OPTIONS $OPTIONS_MONO target=template_release
+    if [ "${build_arm64}" == 1 ]; then
+      $SCONS platform=android arch=arm64 $OPTIONS $OPTIONS_MONO target=template_debug
+      $SCONS platform=android arch=arm64 $OPTIONS $OPTIONS_MONO target=template_release
+    fi
 
-  $SCONS platform=android arch=x86_64 $OPTIONS $OPTIONS_MONO target=template_debug
-  $SCONS platform=android arch=x86_64 $OPTIONS $OPTIONS_MONO target=template_release
+    if [ "${build_x86_32}" == 1 ]; then
+      $SCONS platform=android arch=x86_32 $OPTIONS $OPTIONS_MONO target=template_debug
+      $SCONS platform=android arch=x86_32 $OPTIONS $OPTIONS_MONO target=template_release
+    fi
 
-  pushd platform/android/java
-  ./gradlew generateGodotMonoTemplates
-  popd
+    if [ "${build_x86_64}" == 1 ]; then
+      $SCONS platform=android arch=x86_64 $OPTIONS $OPTIONS_MONO target=template_debug
+      $SCONS platform=android arch=x86_64 $OPTIONS $OPTIONS_MONO target=template_release
+    fi
 
-  mkdir -p /root/out/templates-mono
-  cp bin/android_source.zip /root/out/templates-mono/
-  cp bin/android_monoDebug.apk /root/out/templates-mono/android_debug.apk
-  cp bin/android_monoRelease.apk /root/out/templates-mono/android_release.apk
-  cp bin/godot-lib.template_release.aar /root/out/templates-mono/
+    pushd platform/android/java
+    ./gradlew generateGodotMonoTemplates
+    popd
+
+    mkdir -p /root/out/templates-mono
+    cp bin/android_source.zip /root/out/templates-mono/
+    cp bin/android_monoDebug.apk /root/out/templates-mono/android_debug.apk
+    cp bin/android_monoRelease.apk /root/out/templates-mono/android_release.apk
+    cp bin/godot-lib.template_release.aar /root/out/templates-mono/
+  fi
 fi
 
 echo "Android build successful"
