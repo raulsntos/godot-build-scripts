@@ -93,12 +93,12 @@ fi
 
 IFS=- read version status <<< "$godot_version"
 echo "Building Godot ${version} ${status} from commit or branch ${git_treeish}."
-read -p "Is this correct (y/n)? " choice
-case "$choice" in
-  y|Y ) echo "yes";;
-  n|N ) echo "No, aborting."; exit 0;;
-  * ) echo "Invalid choice, aborting."; exit 1;;
-esac
+# read -p "Is this correct (y/n)? " choice
+# case "$choice" in
+#   y|Y ) echo "yes";;
+#   n|N ) echo "No, aborting."; exit 0;;
+#   * ) echo "Invalid choice, aborting."; exit 1;;
+# esac
 export GODOT_VERSION_STATUS="${status}"
 
 if [ "${status}" == "stable" ]; then
