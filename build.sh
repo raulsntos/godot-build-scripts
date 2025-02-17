@@ -29,6 +29,7 @@ git_treeish="master"
 build_export_templates=1
 build_classical=1
 build_mono=1
+build_dotnet=0
 build_steam=0
 force_download=0
 skip_download=1
@@ -81,6 +82,10 @@ while getopts "h?r:u:p:v:g:b:fscz:-:" opt; do
       build_mono=0
     elif [ "$OPTARG" == "mono" ]; then
       build_classical=0
+    elif [ "$OPTARG" == "dotnet" ]; then
+      build_mono=0
+      build_classical=0
+      build_dotnet=1
     fi
     ;;
   f)
@@ -285,7 +290,7 @@ mkdir -p ${basedir}/out
 mkdir -p ${basedir}/out/logs
 mkdir -p ${basedir}/mono-glue
 
-export podman_run="${podman} run -it --rm --env BUILD_NAME=${BUILD_NAME} --env GODOT_VERSION_STATUS=${GODOT_VERSION_STATUS} --env NUM_CORES=${NUM_CORES} --env CLASSICAL=${build_classical} --env MONO=${build_mono} --env BUILD_TARGETS=${build_targets} --env BUILD_EXPORT_TEMPLATES=${build_export_templates} -v ${basedir}/godot-${godot_version}.tar.gz:/root/godot.tar.gz -v ${basedir}/mono-glue:/root/mono-glue -w /root/"
+export podman_run="${podman} run -it --rm --env BUILD_NAME=${BUILD_NAME} --env GODOT_VERSION_STATUS=${GODOT_VERSION_STATUS} --env NUM_CORES=${NUM_CORES} --env CLASSICAL=${build_classical} --env MONO=${build_mono} --env DOTNET=${build_dotnet} --env BUILD_TARGETS=${build_targets} --env BUILD_EXPORT_TEMPLATES=${build_export_templates} -v ${basedir}/godot-${godot_version}.tar.gz:/root/godot.tar.gz -v ${basedir}/mono-glue:/root/mono-glue -w /root/"
 export img_version=$IMAGE_VERSION
 
 if [ "${build_mono}" == 1 ]; then

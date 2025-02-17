@@ -95,6 +95,7 @@ make_tarball=1
 build_export_templates=1
 build_classical=1
 build_mono=1
+build_dotnet=0
 
 build_targets=""
 build_windows=0
@@ -155,6 +156,10 @@ while getopts "h?v:t:b:z:n-:" opt; do
       build_mono=0
     elif [ "$OPTARG" == "mono" ]; then
       build_classical=0
+    elif [ "$OPTARG" == "dotnet" ]; then
+      build_classical=0
+      build_mono=0
+      build_dotnet=1
     elif [ "$OPTARG" == "none" ]; then
       build_classical=0
       build_mono=0
@@ -306,9 +311,11 @@ fi
 export webdir="${basedir}/web/${templates_version}"
 export reldir="${basedir}/releases/${godot_version}"
 export reldir_mono="${reldir}/mono"
+export reldir_dotnet="${reldir}/dotnet"
 export tmpdir="${basedir}/tmp"
 export templatesdir="${tmpdir}/templates"
 export templatesdir_mono="${tmpdir}/mono/templates"
+export templatesdir_dotnet="${tmpdir}/dotnet/templates"
 
 export godot_basename="Godot_v${godot_version}"
 
@@ -323,8 +330,10 @@ if [ "${do_cleanup}" == "1" ]; then
   mkdir -p ${webdir}
   mkdir -p ${reldir}
   mkdir -p ${reldir_mono}
+  mkdir -p ${reldir_dotnet}
   mkdir -p ${templatesdir}
   mkdir -p ${templatesdir_mono}
+  mkdir -p ${templatesdir_dotnet}
 
 fi
 
@@ -846,6 +855,250 @@ if [ "${build_mono}" == "1" ]; then
   sha512sum [Gg]* >> SHA512-SUMS.txt
   mkdir -p ${basedir}/sha512sums/${godot_version}/mono
   cp SHA512-SUMS.txt ${basedir}/sha512sums/${godot_version}/mono/
+  popd
+
+fi
+
+# .NET
+
+if [ "${build_dotnet}" == "1" ]; then
+
+  ## Linux (.NET) ##
+
+  if [ "${build_linux}" == "1" ]; then
+
+    # Editor
+    if [ "${build_linux_x86_64}" == "1" ]; then
+      binbasename="${godot_basename}_dotnet_linux"
+      mkdir -p ${binbasename}_x86_64
+      cp out/linux/x86_64/tools-dotnet/godot.linuxbsd.editor.x86_64.dotnet ${binbasename}_x86_64/${binbasename}.x86_64
+      zip -r -q -9 "${reldir_dotnet}/${binbasename}_x86_64.zip" ${binbasename}_x86_64
+      rm -rf ${binbasename}_x86_64
+    fi
+
+    if [ "${build_linux_x86_32}" == "1" ]; then
+      binbasename="${godot_basename}_dotnet_linux"
+      mkdir -p ${binbasename}_x86_32
+      cp out/linux/x86_32/tools-dotnet/godot.linuxbsd.editor.x86_32.dotnet ${binbasename}_x86_32/${binbasename}.x86_32
+      zip -r -q -9 "${reldir_dotnet}/${binbasename}_x86_32.zip" ${binbasename}_x86_32
+      rm -rf ${binbasename}_x86_32
+    fi
+
+    if [ "${build_linux_arm64}" == "1" ]; then
+      binbasename="${godot_basename}_dotnet_linux"
+      mkdir -p ${binbasename}_arm64
+      cp out/linux/arm64/tools-dotnet/godot.linuxbsd.editor.arm64.dotnet ${binbasename}_arm64/${binbasename}.arm64
+      zip -r -q -9 "${reldir_dotnet}/${binbasename}_arm64.zip" ${binbasename}_arm64
+      rm -rf ${binbasename}_arm64
+    fi
+
+    if [ "${build_linux_arm32}" == "1" ]; then
+      binbasename="${godot_basename}_dotnet_linux"
+      mkdir -p ${binbasename}_arm32
+      cp out/linux/arm32/tools-dotnet/godot.linuxbsd.editor.arm32.dotnet ${binbasename}_arm32/${binbasename}.arm32
+      zip -r -q -9 "${reldir_dotnet}/${binbasename}_arm32.zip" ${binbasename}_arm32
+      rm -rf ${binbasename}_arm32
+    fi
+
+    # ICU data
+    if [ -f ${basedir}/git/thirdparty/icu4c/icudt_godot.dat ]; then
+      cp ${basedir}/git/thirdparty/icu4c/icudt_godot.dat ${templatesdir_dotnet}/icudt_godot.dat
+    else
+      echo "icudt_godot.dat" not found.
+    fi
+
+    # Templates
+    if [ "${build_export_templates}" == "1" ]; then
+      if [ "${build_linux_x86_64}" == "1" ]; then
+        cp out/linux/x86_64/templates-dotnet/godot.linuxbsd.template_debug.x86_64.dotnet ${templatesdir_dotnet}/linux_debug.x86_64
+        cp out/linux/x86_64/templates-dotnet/godot.linuxbsd.template_release.x86_64.dotnet ${templatesdir_dotnet}/linux_release.x86_64
+      fi
+      if [ "${build_linux_x86_32}" == "1" ]; then
+        cp out/linux/x86_32/templates-dotnet/godot.linuxbsd.template_debug.x86_32.dotnet ${templatesdir_dotnet}/linux_debug.x86_32
+        cp out/linux/x86_32/templates-dotnet/godot.linuxbsd.template_release.x86_32.dotnet ${templatesdir_dotnet}/linux_release.x86_32
+      fi
+      if [ "${build_linux_arm64}" == "1" ]; then
+        cp out/linux/arm64/templates-dotnet/godot.linuxbsd.template_debug.arm64.dotnet ${templatesdir_dotnet}/linux_debug.arm64
+        cp out/linux/arm64/templates-dotnet/godot.linuxbsd.template_release.arm64.dotnet ${templatesdir_dotnet}/linux_release.arm64
+      fi
+      if [ "${build_linux_arm32}" == "1" ]; then
+        cp out/linux/arm32/templates-dotnet/godot.linuxbsd.template_debug.arm32.dotnet ${templatesdir_dotnet}/linux_debug.arm32
+        cp out/linux/arm32/templates-dotnet/godot.linuxbsd.template_release.arm32.dotnet ${templatesdir_dotnet}/linux_release.arm32
+      fi
+    fi
+
+  fi
+
+  ## Windows (.NET) ##
+
+  if [ "${build_windows}" == "1" ]; then
+
+    # Editor
+    if [ "${build_windows_x86_64}" == "1" ]; then
+      binname="${godot_basename}_dotnet_win64"
+      wrpname="${godot_basename}_dotnet_win64_console"
+      mkdir -p ${binname}
+      cp out/windows/x86_64/tools-dotnet/godot.windows.editor.x86_64.dotnet.exe ${binname}/${binname}.exe
+      sign_windows ${binname}/${binname}.exe
+      cp out/windows/x86_64/tools-dotnet/godot.windows.editor.x86_64.dotnet.console.exe ${binname}/${wrpname}.exe
+      sign_windows ${binname}/${wrpname}.exe
+      zip -r -q -9 "${reldir_dotnet}/${binname}.zip" ${binname}
+      rm -rf ${binname}
+    fi
+
+    if [ "${build_windows_x86_32}" == "1" ]; then
+      binname="${godot_basename}_dotnet_win32"
+      wrpname="${godot_basename}_dotnet_win32_console"
+      mkdir -p ${binname}
+      cp out/windows/x86_32/tools-dotnet/godot.windows.editor.x86_32.dotnet.exe ${binname}/${binname}.exe
+      sign_windows ${binname}/${binname}.exe
+      cp out/windows/x86_32/tools-dotnet/godot.windows.editor.x86_32.dotnet.console.exe ${binname}/${wrpname}.exe
+      sign_windows ${binname}/${wrpname}.exe
+      zip -r -q -9 "${reldir_dotnet}/${binname}.zip" ${binname}
+      rm -rf ${binname}
+    fi
+
+    if [ "${build_windows_arm64}" == "1" ]; then
+      binname="${godot_basename}_dotnet_windows_arm64"
+      wrpname="${godot_basename}_dotnet_windows_arm64_console"
+      mkdir -p ${binname}
+      cp out/windows/arm64/tools-dotnet/godot.windows.editor.arm64.llvm.dotnet.exe ${binname}/${binname}.exe
+      sign_windows ${binname}/${binname}.exe
+      cp out/windows/arm64/tools-dotnet/godot.windows.editor.arm64.llvm.dotnet.console.exe ${binname}/${wrpname}.exe
+      sign_windows ${binname}/${wrpname}.exe
+      zip -r -q -9 "${reldir_dotnet}/${binname}.zip" ${binname}
+      rm -rf ${binname}
+    fi
+
+    # Templates
+    if [ "${build_export_templates}" == "1" ]; then
+      if [ "${build_windows_x86_64}" == "1" ]; then
+        cp out/windows/x86_64/templates-dotnet/godot.windows.template_debug.x86_64.dotnet.exe ${templatesdir_dotnet}/windows_debug_x86_64.exe
+        cp out/windows/x86_64/templates-dotnet/godot.windows.template_release.x86_64.dotnet.exe ${templatesdir_dotnet}/windows_release_x86_64.exe
+      fi
+      if [ "${build_windows_x86_32}" == "1" ]; then
+        cp out/windows/x86_32/templates-dotnet/godot.windows.template_debug.x86_32.dotnet.exe ${templatesdir_dotnet}/windows_debug_x86_32.exe
+        cp out/windows/x86_32/templates-dotnet/godot.windows.template_release.x86_32.dotnet.exe ${templatesdir_dotnet}/windows_release_x86_32.exe
+      fi
+      if [ "${build_windows_arm64}" == "1" ]; then
+        cp out/windows/arm64/templates-dotnet/godot.windows.template_debug.arm64.llvm.dotnet.exe ${templatesdir_dotnet}/windows_debug_arm64.exe
+        cp out/windows/arm64/templates-dotnet/godot.windows.template_release.arm64.llvm.dotnet.exe ${templatesdir_dotnet}/windows_release_arm64.exe
+      fi
+      if [ "${build_windows_x86_64}" == "1" ]; then
+        cp out/windows/x86_64/templates-dotnet/godot.windows.template_debug.x86_64.dotnet.console.exe ${templatesdir_dotnet}/windows_debug_x86_64_console.exe
+        cp out/windows/x86_64/templates-dotnet/godot.windows.template_release.x86_64.dotnet.console.exe ${templatesdir_dotnet}/windows_release_x86_64_console.exe
+      fi
+      if [ "${build_windows_x86_32}" == "1" ]; then
+        cp out/windows/x86_32/templates-dotnet/godot.windows.template_debug.x86_32.dotnet.console.exe ${templatesdir_dotnet}/windows_debug_x86_32_console.exe
+        cp out/windows/x86_32/templates-dotnet/godot.windows.template_release.x86_32.dotnet.console.exe ${templatesdir_dotnet}/windows_release_x86_32_console.exe
+      fi
+      if [ "${build_windows_arm64}" == "1" ]; then
+        cp out/windows/arm64/templates-dotnet/godot.windows.template_debug.arm64.llvm.dotnet.console.exe ${templatesdir_dotnet}/windows_debug_arm64_console.exe
+        cp out/windows/arm64/templates-dotnet/godot.windows.template_release.arm64.llvm.dotnet.console.exe ${templatesdir_dotnet}/windows_release_arm64_console.exe
+      fi
+    fi
+
+  fi
+
+  ## macOS (.NET) ##
+
+  if [ "${build_macos}" == "1" ]; then
+
+    # Editor
+    binname="${godot_basename}_dotnet_macos.universal"
+    rm -rf Godot_dotnet.app
+    cp -r git/misc/dist/macos_tools.app Godot_dotnet.app
+    mkdir -p Godot_dotnet.app/Contents/{MacOS,Resources}
+    cp out/macos/tools-dotnet/godot.macos.editor.universal.dotnet Godot_dotnet.app/Contents/MacOS/Godot
+    chmod +x Godot_dotnet.app/Contents/MacOS/Godot
+    zip -q -9 -r "${reldir_dotnet}/${binname}.zip" Godot_dotnet.app
+    rm -rf Godot_dotnet.app
+    sign_macos ${reldir_dotnet} ${binname} 1
+
+    # Templates
+    if [ "${build_export_templates}" == "1" ]; then
+      rm -rf macos_template.app
+      cp -r git/misc/dist/macos_template.app .
+      mkdir -p macos_template.app/Contents/{MacOS,Resources}
+      cp out/macos/templates-dotnet/godot.macos.template_debug.universal.dotnet macos_template.app/Contents/MacOS/godot_macos_debug.universal
+      cp out/macos/templates-dotnet/godot.macos.template_release.universal.dotnet macos_template.app/Contents/MacOS/godot_macos_release.universal
+      chmod +x macos_template.app/Contents/MacOS/godot_macos*
+      zip -q -9 -r "${templatesdir_dotnet}/macos.zip" macos_template.app
+      rm -rf macos_template.app
+      sign_macos_template ${templatesdir_dotnet} 1
+    fi
+
+  fi
+
+  ## Android (.NET) ##
+
+  if [ "${build_android}" == "1" ]; then
+
+    if [ "${build_export_templates}" == "1" ]; then
+      # Lib for direct download
+      cp out/android/templates-dotnet/godot-lib.template_release.aar ${reldir_dotnet}/godot-lib.${templates_version}.dotnet.template_release.aar
+
+      # Templates
+      cp out/android/templates-dotnet/*.apk ${templatesdir_dotnet}/
+      cp out/android/templates-dotnet/android_source.zip ${templatesdir_dotnet}/
+    fi
+
+  fi
+
+  ## iOS (.NET) ##
+
+  if [ "${build_ios}" == "1" ]; then
+
+    if [ "${build_export_templates}" == "1" ]; then
+      rm -rf ios_xcode
+      cp -r git/misc/dist/ios_xcode ios_xcode
+      cp out/ios/templates-dotnet/libgodot.ios.simulator.a ios_xcode/libgodot.ios.release.xcframework/ios-arm64_x86_64-simulator/libgodot.a
+      cp out/ios/templates-dotnet/libgodot.ios.debug.simulator.a ios_xcode/libgodot.ios.debug.xcframework/ios-arm64_x86_64-simulator/libgodot.a
+      cp out/ios/templates-dotnet/libgodot.ios.a ios_xcode/libgodot.ios.release.xcframework/ios-arm64/libgodot.a
+      cp out/ios/templates-dotnet/libgodot.ios.debug.a ios_xcode/libgodot.ios.debug.xcframework/ios-arm64/libgodot.a
+      cp -r deps/moltenvk/MoltenVK/MoltenVK.xcframework ios_xcode/
+      rm -rf ios_xcode/MoltenVK.xcframework/{macos,tvos}*
+      cd ios_xcode
+      zip -q -9 -r "${templatesdir_dotnet}/ios.zip" *
+      cd ..
+      rm -rf ios_xcode
+    fi
+
+  fi
+
+  # No .NET support for those platforms yet.
+
+  if false; then
+
+  ## Web (.NET) ##
+
+  if [ "${build_web}" == "1" ]; then
+
+    # Templates
+    if [ "${build_export_templates}" == "1" ]; then
+      cp out/web/templates-dotnet/godot.web.template_debug.wasm32.dotnet.zip ${templatesdir_dotnet}/web_debug.zip
+      cp out/web/templates-dotnet/godot.web.template_release.wasm32.dotnet.zip ${templatesdir_dotnet}/web_release.zip
+    fi
+
+  fi
+
+  fi
+
+  ## Templates TPZ (.NET) ##
+
+  if [ "${build_export_templates}" == "1" ]; then
+    echo "${templates_version}.dotnet" > ${templatesdir_dotnet}/version.txt
+    pushd ${templatesdir_dotnet}/..
+    zip -q -9 -r -D "${reldir_dotnet}/${godot_basename}_dotnet_export_templates.tpz" templates/*
+    popd
+  fi
+
+  ## SHA-512 sums (.NET) ##
+
+  pushd ${reldir_dotnet}
+  sha512sum [Gg]* >> SHA512-SUMS.txt
+  mkdir -p ${basedir}/sha512sums/${godot_version}/dotnet
+  cp SHA512-SUMS.txt ${basedir}/sha512sums/${godot_version}/dotnet/
   popd
 
 fi

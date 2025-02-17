@@ -7,6 +7,7 @@ set -e
 export SCONS="scons -j${NUM_CORES} verbose=yes warnings=no progress=no"
 export OPTIONS="production=yes"
 export OPTIONS_MONO="module_mono_enabled=yes"
+export OPTIONS_DOTNET="module_dotnet_enabled=yes"
 export TERM=xterm
 
 build_x86_64=1
@@ -183,6 +184,44 @@ if [ "${MONO}" == "1" ]; then
     cp bin/android_monoDebug.apk /root/out/templates-mono/android_debug.apk
     cp bin/android_monoRelease.apk /root/out/templates-mono/android_release.apk
     cp bin/godot-lib.template_release.aar /root/out/templates-mono/
+  fi
+fi
+
+# .NET
+
+if [ "${DOTNET}" == "1" ]; then
+  echo "Starting .NET build for Android..."
+
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    if [ "${build_arm32}" == 1 ]; then
+        $SCONS platform=android arch=arm32 $OPTIONS $OPTIONS_DOTNET target=template_debug
+        $SCONS platform=android arch=arm32 $OPTIONS $OPTIONS_DOTNET target=template_release
+    fi
+
+    if [ "${build_arm64}" == 1 ]; then
+      $SCONS platform=android arch=arm64 $OPTIONS $OPTIONS_DOTNET target=template_debug
+      $SCONS platform=android arch=arm64 $OPTIONS $OPTIONS_DOTNET target=template_release
+    fi
+
+    if [ "${build_x86_32}" == 1 ]; then
+      $SCONS platform=android arch=x86_32 $OPTIONS $OPTIONS_DOTNET target=template_debug
+      $SCONS platform=android arch=x86_32 $OPTIONS $OPTIONS_DOTNET target=template_release
+    fi
+
+    if [ "${build_x86_64}" == 1 ]; then
+      $SCONS platform=android arch=x86_64 $OPTIONS $OPTIONS_DOTNET target=template_debug
+      $SCONS platform=android arch=x86_64 $OPTIONS $OPTIONS_DOTNET target=template_release
+    fi
+
+    pushd platform/android/java
+    ./gradlew generateGodotMonoTemplates
+    popd
+
+    mkdir -p /root/out/templates-dotnet
+    cp bin/android_source.zip /root/out/templates-dotnet/
+    cp bin/android_dotnetDebug.apk /root/out/templates-dotnet/android_debug.apk
+    cp bin/android_dotnetRelease.apk /root/out/templates-dotnet/android_release.apk
+    cp bin/godot-lib.template_release.aar /root/out/templates-dotnet/
   fi
 fi
 

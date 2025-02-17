@@ -9,6 +9,7 @@ export SCONS="scons -j${NUM_CORES} verbose=yes warnings=no progress=no"
 # which is seen as a regression in the current workflow.
 export OPTIONS="production=yes use_lto=no"
 export OPTIONS_MONO="module_mono_enabled=yes"
+export OPTIONS_DOTNET="module_dotnet_enabled=yes"
 export TERM=xterm
 
 export IOS_SDK="18.2"
@@ -134,6 +135,51 @@ if [ "${MONO}" == "1" ]; then
     if [ "${build_x86_64}" == 1 ]; then
       cp bin/libgodot.ios.template_release.x86_64.simulator.a /root/out/templates-mono/libgodot.ios.simulator.a
       cp bin/libgodot.ios.template_debug.x86_64.simulator.a /root/out/templates-mono/libgodot.ios.debug.simulator.a
+    fi
+  fi
+fi
+
+# .NET
+
+if [ "${DOTNET}" == "1" ]; then
+  echo "Starting .NET build for iOS..."
+
+  if [ "${BUILD_EXPORT_TEMPLATES}" == "1" ]; then
+    if [ "${build_arm64}" == 1 ]; then
+      # arm64 device
+      $SCONS platform=ios $OPTIONS $OPTIONS_DOTNET arch=arm64 ios_simulator=no target=template_debug \
+        IOS_SDK_PATH="/root/ioscross/arm64/SDK/iPhoneOS${IOS_SDK}.sdk" IOS_TOOLCHAIN_PATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
+      $SCONS platform=ios $OPTIONS $OPTIONS_DOTNET arch=arm64 ios_simulator=no target=template_release \
+        IOS_SDK_PATH="/root/ioscross/arm64/SDK/iPhoneOS${IOS_SDK}.sdk" IOS_TOOLCHAIN_PATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
+
+      # arm64 simulator
+      # Disabled for now as it doesn't work with cctools-port and current LLVM.
+      # See https://github.com/godotengine/build-containers/pull/85.
+      #$SCONS platform=ios $OPTIONS $OPTIONS_DOTNET arch=arm64 ios_simulator=yes target=template_debug \
+      #  IOS_SDK_PATH="/root/ioscross/arm64_sim/SDK/iPhoneSimulator${IOS_SDK}.sdk" IOS_TOOLCHAIN_PATH="/root/ioscross/arm64_sim/" ios_triple="arm-apple-darwin11-"
+      #$SCONS platform=ios $OPTIONS $OPTIONS_DOTNET arch=arm64 ios_simulator=yes target=template_release \
+      #  IOS_SDK_PATH="/root/ioscross/arm64_sim/SDK/iPhoneSimulator${IOS_SDK}.sdk" IOS_TOOLCHAIN_PATH="/root/ioscross/arm64_sim/" ios_triple="arm-apple-darwin11-"
+    fi
+
+    if [ "${build_x86_64}" == 1 ]; then
+      # x86_64 simulator
+      $SCONS platform=ios $OPTIONS $OPTIONS_DOTNET arch=x86_64 ios_simulator=yes target=template_debug \
+        IOS_SDK_PATH="/root/ioscross/x86_64_sim/SDK/iPhoneSimulator${IOS_SDK}.sdk" IOS_TOOLCHAIN_PATH="/root/ioscross/x86_64_sim/" ios_triple="x86_64-apple-darwin11-"
+      $SCONS platform=ios $OPTIONS $OPTIONS_DOTNET arch=x86_64 ios_simulator=yes target=template_release \
+        IOS_SDK_PATH="/root/ioscross/x86_64_sim/SDK/iPhoneSimulator${IOS_SDK}.sdk" IOS_TOOLCHAIN_PATH="/root/ioscross/x86_64_sim/" ios_triple="x86_64-apple-darwin11-"
+    fi
+
+    mkdir -p /root/out/templates-dotnet
+
+    if [ "${build_arm64}" == 1 ]; then
+      cp bin/libgodot.ios.template_release.arm64.a /root/out/templates-dotnet/libgodot.ios.a
+      cp bin/libgodot.ios.template_debug.arm64.a /root/out/templates-dotnet/libgodot.ios.debug.a
+      #$IOS_LIPO -create bin/libgodot.ios.template_release.arm64.simulator.a bin/libgodot.ios.template_release.x86_64.simulator.a -output /root/out/templates-dotnet/libgodot.ios.simulator.a
+      #$IOS_LIPO -create bin/libgodot.ios.template_debug.arm64.simulator.a bin/libgodot.ios.template_debug.x86_64.simulator.a -output /root/out/templates-dotnet/libgodot.ios.debug.simulator.a
+    fi
+    if [ "${build_x86_64}" == 1 ]; then
+      cp bin/libgodot.ios.template_release.x86_64.simulator.a /root/out/templates-dotnet/libgodot.ios.simulator.a
+      cp bin/libgodot.ios.template_debug.x86_64.simulator.a /root/out/templates-dotnet/libgodot.ios.debug.simulator.a
     fi
   fi
 fi
