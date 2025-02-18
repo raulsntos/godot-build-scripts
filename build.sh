@@ -263,4 +263,4 @@ if [ ! -z "$SUDO_UID" ]; then
   uid="${SUDO_UID}"
   gid="${SUDO_GID}"
 fi
-chown -R -f $uid:$gid ${basedir}/git ${basedir}/out ${basedir}/mono-glue ${basedir}/godot*.tar.gz
+chown -R -f $uid:$gid ${basedir}/git ${basedir}/out ${basedir}/mono-glue ${basedir}/godot*.tar.gz || true
